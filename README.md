@@ -63,7 +63,21 @@ npm install
 
 ## 🚀 Utilisation
 
-Décrivez ici comment lancer l’application (commande, arguments, etc.).
+1. Installer les dépendances :
+	```bash
+	npm install
+	```
+2. Générer le package VSIX :
+	```bash
+	npx vsce package
+	```
+3. Installer l'extension localement :
+	```bash
+	code --install-extension auto-readme-bot-1.0.2.vsix
+	```
+4. Exécuter la commande dans VS Code :
+	- Ouvrir la palette (`Ctrl+Shift+P`)
+	- Lancer `Auto README: Générer un README`
 
 ## 💡 Usage
 
