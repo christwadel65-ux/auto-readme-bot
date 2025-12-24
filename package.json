@@ -1,0 +1,84 @@
+{
+  "name": "auto-readme-bot",
+  "displayName": "Auto README Bot",
+  "description": "Génère automatiquement un README.md après analyse du code du workspace (Node, Python, .NET/C#, Java, Go, Rust, PHP, Ruby) avec détection des endpoints ASP.NET.",
+  "author": "© C.L (Skill teams)",
+  "version": "1.0.3",
+  "icon": "icon.png",
+  "publisher": "local-publisher",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/readme-bot"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "autoReadme.generate",
+        "title": "Auto README: Générer un README"
+      },
+      {
+        "command": "autoReadme.update",
+        "title": "Auto README: Mettre à jour le README"
+      }
+    ],
+    "configuration": {
+      "type": "object",
+      "title": "Auto README Bot",
+      "properties": {
+        "autoReadme.includeTree": {
+          "type": "boolean",
+          "default": true,
+          "description": "Inclure l'arborescence des dossiers dans le README."
+        },
+        "autoReadme.maxTreeDepth": {
+          "type": "number",
+          "default": 2,
+          "description": "Profondeur maximale de l'arborescence."
+        },
+        "autoReadme.useAI": {
+          "type": "boolean",
+          "default": false,
+          "description": "Utiliser Azure OpenAI pour enrichir la description (nécessite configuration)."
+        },
+        "autoReadme.customTemplate": {
+          "type": "string",
+          "default": "",
+          "description": "Chemin vers un fichier de template personnalisé (optionnel)."
+        },
+        "autoReadme.showPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Afficher un aperçu du README avant sauvegarde."
+        },
+        "autoReadme.respectGitignore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Respecter les patterns du fichier .gitignore lors du scan."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run build",
+    "build": "tsc -p .",
+    "watch": "tsc -w",
+    "version:patch": "npm version patch --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "package": "vsce package",
+    "vsix": "npm run build && vsce package",
+    "vsix:install": "npm run vsix && code --install-extension $(Get-ChildItem *.vsix | Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "@types/vscode": "^1.90.0",
+    "@vscode/vsce": "^2.25.0",
+    "typescript": "^5.9.3"
+  }
+}
