@@ -1,9 +1,9 @@
 {
   "name": "auto-readme-bot",
   "displayName": "Auto README Bot",
-  "description": "Génère automatiquement un README.md après analyse du code du workspace (Node, Python, .NET/C#, Java, Go) avec détection des endpoints ASP.NET.",
+  "description": "Génère automatiquement un README.md après analyse du code du workspace (Node, Python, .NET/C#, Java, Go, Rust, PHP, Ruby) avec détection des endpoints ASP.NET.",
   "author": "© C.L (Skill teams)",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "icon": "icon.png",
   "publisher": "local-publisher",
   "repository": {
