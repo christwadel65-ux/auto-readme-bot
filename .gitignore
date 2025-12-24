@@ -3,3 +3,10 @@ dist/
 node_modules/
 *.vsix
 tools/
+out/
+.vscode/
+.vscodeignore
+auto-readme-bot/
+package-lock.json
+tsconfig.json
+icon.png
