@@ -18,7 +18,8 @@ $ [command] --example
 ✓ Done! Output generated successfully.
 ```
 
-*[Ajoutez ici un GIF de démonstration animé]*
+<img width="800" height="400" alt="image" src="https://github.com/user-attachments/assets/8b5e4238-18d0-48f5-b3d6-3205eb7e77c2" />
+
 
 ---
 
