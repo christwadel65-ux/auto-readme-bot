@@ -36,9 +36,18 @@ export function activate(context: vscode.ExtensionContext) {
       const projectType = await detectProjectType(rootUri);
       const meta = await extractMetadata(rootUri, projectType);
       const tree = includeTree ? await buildDirectoryTree(rootUri, maxTreeDepth) : '';
-      let readme = generateReadmeContent({ projectName: wsFolder.name, projectType, meta, tree });
-      if (useAI) { const enriched = await enrichWithAI(readme); if (enriched) readme = enriched; }
+      
+      // Extract creation date from existing README or use current date
       const readmeUri = vscode.Uri.joinPath(rootUri, 'README.md');
+      let creationDate: string | undefined;
+      const existingReadme = await readTextFile(readmeUri);
+      if (existingReadme) {
+        const match = existingReadme.match(/\*\*Structure créée le\*\*\s*:\s*(\d+\s+\w+\s+\d{4})/);
+        creationDate = match ? match[1] : undefined;
+      }
+      
+      let readme = generateReadmeContent({ projectName: wsFolder.name, projectType, meta, tree, creationDate });
+      if (useAI) { const enriched = await enrichWithAI(readme); if (enriched) readme = enriched; }
       await vscode.workspace.fs.writeFile(readmeUri, textEncoder.encode(readme));
       vscode.window.showInformationMessage('README.md généré ✅');
       const doc = await vscode.workspace.openTextDocument(readmeUri);
@@ -265,8 +274,8 @@ async function extractMetadata(root: vscode.Uri, type: ProjectType): Promise<Met
   return meta;
 }
 
-function generateReadmeContent(params: { projectName: string; projectType: ProjectType; meta: Metadata; tree: string; }): string {
-  const { projectName, projectType, meta, tree } = params;
+function generateReadmeContent(params: { projectName: string; projectType: ProjectType; meta: Metadata; tree: string; creationDate?: string }): string {
+  const { projectName, projectType, meta, tree, creationDate: providedCreationDate } = params;
   const shield = (label: string, message: string, color: string) => `![${label}](https://img.shields.io/badge/${encodeURIComponent(label)}-${encodeURIComponent(message)}-${color})`;
   const colorByType: Record<ProjectType, string> = { node: '3C873A', python: '3776AB', '.net': '512BD4', java: 'F89820', go: '00ADD8', generic: '444444' };
   
@@ -275,7 +284,7 @@ function generateReadmeContent(params: { projectName: string; projectType: Proje
     return `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`;
   };
   
-  const creationDate = '9 décembre 2025';
+  const creationDate = providedCreationDate || formatDate(new Date());
   const currentDate = formatDate(new Date());
   
   const title = `# 📦 ${projectName}\n\n`;
