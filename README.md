@@ -193,17 +193,23 @@ $env:AZURE_OPENAI_DEPLOYMENT = "..."
 
 ## 📚 Documentation
 
-### Guides principaux
-- 📖 **[START_HERE.md](START_HERE.md)** - Point de départ recommandé
-- 📘 **[USAGE_GUIDE.md](USAGE_GUIDE.md)** - Guide d'utilisation complet
-- 🔧 **[TECHNICAL.md](TECHNICAL.md)** - Documentation technique
-- ✨ **[IMPROVEMENTS.md](IMPROVEMENTS.md)** - Les 8 améliorations v1.0.3
+### 📖 Guide de démarrage
+- **[START_HERE.md](START_HERE.md)** - Point de départ recommandé (5 min)
 
-### Documentation supplémentaire
-- 📊 **[SUMMARY.md](SUMMARY.md)** - Résumé global
-- 📋 **[CHANGELOG_DETAILED.md](CHANGELOG_DETAILED.md)** - Historique détaillé
-- 🏗️ **[PROJECT_STRUCTURE.md](PROJECT_STRUCTURE.md)** - Structure du projet
-- 🎯 **[QUICK_START.md](QUICK_START.md)** - Accès rapide
+### 📂 Documentation complète (dossier docs/)
+- **[docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md)** - Guide d'utilisation complet
+- **[docs/TECHNICAL.md](docs/TECHNICAL.md)** - Documentation technique
+- **[docs/IMPROVEMENTS.md](docs/IMPROVEMENTS.md)** - Les 8 améliorations v1.0.3
+- **[docs/INDEX.md](docs/INDEX.md)** - Index de toute la documentation
+- **[docs/QUICK_START.md](docs/QUICK_START.md)** - Accès rapide aux réponses
+
+### 📊 Résumés et références
+- **[docs/SUMMARY.md](docs/SUMMARY.md)** - Résumé global avec statistiques
+- **[docs/FINAL_SUMMARY.md](docs/FINAL_SUMMARY.md)** - Synthèse finale du projet
+- **[docs/CHANGELOG_DETAILED.md](docs/CHANGELOG_DETAILED.md)** - Historique détaillé
+- **[docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)** - Structure du projet
+- **[docs/DELIVERY_REPORT.md](docs/DELIVERY_REPORT.md)** - Rapport de livraison
+- **[docs/DOCUMENTATION_OVERVIEW.md](docs/DOCUMENTATION_OVERVIEW.md)** - Vue d'ensemble
 
 **Total:** 14 fichiers de documentation (~109 KB, 2700+ lignes)
 
@@ -241,20 +247,20 @@ $env:AZURE_OPENAI_DEPLOYMENT = "..."
 
 ### Besoin d'aide ?
 1. Consulter [START_HERE.md](START_HERE.md) (5 min)
-2. Lire le [Guide d'utilisation](USAGE_GUIDE.md) (20 min)
-3. Vérifier le [Troubleshooting](USAGE_GUIDE.md#troubleshooting)
+2. Lire le [Guide d'utilisation](docs/USAGE_GUIDE.md) (20 min)
+3. Vérifier le [Troubleshooting](docs/USAGE_GUIDE.md#troubleshooting)
 4. Consulter les logs dans OutputChannel "Auto README Bot"
 
 ### Documentation par rôle
-- **Utilisateurs** → [USAGE_GUIDE.md](USAGE_GUIDE.md)
-- **Développeurs** → [TECHNICAL.md](TECHNICAL.md)
-- **Managers** → [SUMMARY.md](SUMMARY.md)
+- **Utilisateurs** → [docs/USAGE_GUIDE.md](docs/USAGE_GUIDE.md)
+- **Développeurs** → [docs/TECHNICAL.md](docs/TECHNICAL.md)
+- **Managers** → [docs/SUMMARY.md](docs/SUMMARY.md)
 
 ### Liens utiles
 - 📖 [Documentation complète](START_HERE.md)
-- 🐛 [Troubleshooting](USAGE_GUIDE.md#troubleshooting)
-- 📊 [Statistiques du projet](SUMMARY.md)
-- 🔧 [Détails techniques](TECHNICAL.md)
+- 🐛 [Troubleshooting](docs/USAGE_GUIDE.md#troubleshooting)
+- 📊 [Statistiques du projet](docs/SUMMARY.md)
+- 🔧 [Détails techniques](docs/TECHNICAL.md)
 
 ---
 
