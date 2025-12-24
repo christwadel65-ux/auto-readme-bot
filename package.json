@@ -22,6 +22,10 @@
       {
         "command": "autoReadme.generate",
         "title": "Auto README: Générer un README"
+      },
+      {
+        "command": "autoReadme.update",
+        "title": "Auto README: Mettre à jour le README"
       }
     ],
     "configuration": {
@@ -42,6 +46,21 @@
           "type": "boolean",
           "default": false,
           "description": "Utiliser Azure OpenAI pour enrichir la description (nécessite configuration)."
+        },
+        "autoReadme.customTemplate": {
+          "type": "string",
+          "default": "",
+          "description": "Chemin vers un fichier de template personnalisé (optionnel)."
+        },
+        "autoReadme.showPreview": {
+          "type": "boolean",
+          "default": true,
+          "description": "Afficher un aperçu du README avant sauvegarde."
+        },
+        "autoReadme.respectGitignore": {
+          "type": "boolean",
+          "default": true,
+          "description": "Respecter les patterns du fichier .gitignore lors du scan."
         }
       }
     }

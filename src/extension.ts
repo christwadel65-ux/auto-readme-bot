@@ -2,7 +2,10 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 
-type ProjectType = 'node' | 'python' | '.net' | 'java' | 'go' | 'generic';
+type ProjectType = 'node' | 'python' | '.net' | 'java' | 'go' | 'rust' | 'php' | 'ruby' | 'generic';
+
+// OutputChannel pour les logs
+let outputChannel: vscode.OutputChannel;
 
 interface Metadata {
   dependencies?: Record<string, string>;
@@ -19,23 +22,48 @@ interface Metadata {
   dotnetEndpoints?: Record<string, { verb: string; route: string; source: string }[]>;
   javaBuild?: 'maven' | 'gradle' | undefined;
   goModules?: string[];
+  rustCargoVersion?: string;
+  phpComposerVersion?: string;
+  rubyGemfileVersion?: string;
   entryPoints?: string[];
   license?: string;
 }
 
 export function activate(context: vscode.ExtensionContext) {
+  // Créer un OutputChannel pour les logs
+  outputChannel = vscode.window.createOutputChannel('Auto README Bot');
+  outputChannel.show(true);
+  
+  const log = (msg: string) => outputChannel.appendLine(`[${new Date().toLocaleTimeString()}] ${msg}`);
+  log('Extension activée ✓');
+
   const disposable = vscode.commands.registerCommand('autoReadme.generate', async () => {
     try {
+      log('Commande de génération initiée...');
       const wsFolder = vscode.workspace.workspaceFolders?.[0];
-      if (!wsFolder) { vscode.window.showErrorMessage('Aucun dossier de workspace ouvert.'); return; }
+      if (!wsFolder) {
+        log('❌ Erreur: Aucun dossier de workspace ouvert.');
+        vscode.window.showErrorMessage('Aucun dossier de workspace ouvert.');
+        return;
+      }
+      log(`📂 Workspace détecté: ${wsFolder.name}`);
+      
       const config = vscode.workspace.getConfiguration('autoReadme');
       const includeTree = config.get<boolean>('includeTree', true);
       const maxTreeDepth = config.get<number>('maxTreeDepth', 2);
       const useAI = config.get<boolean>('useAI', false);
+      
+      log(`Configuration: tree=${includeTree}, depth=${maxTreeDepth}, AI=${useAI}`);
+      
       const rootUri = wsFolder.uri;
       const projectType = await detectProjectType(rootUri);
+      log(`🔍 Type de projet détecté: ${projectType}`);
+      
       const meta = await extractMetadata(rootUri, projectType);
+      log('📊 Métadonnées extraites');
+      
       const tree = includeTree ? await buildDirectoryTree(rootUri, maxTreeDepth) : '';
+      log('🌳 Arborescence générée');
       
       // Extract creation date from existing README or use current date
       const readmeUri = vscode.Uri.joinPath(rootUri, 'README.md');
@@ -47,16 +75,81 @@ export function activate(context: vscode.ExtensionContext) {
       }
       
       let readme = generateReadmeContent({ projectName: wsFolder.name, projectType, meta, tree, creationDate });
-      if (useAI) { const enriched = await enrichWithAI(readme); if (enriched) readme = enriched; }
+      log('📄 README généré');
+      
+      if (useAI) {
+        log('🤖 Enrichissement IA en cours...');
+        const enriched = await enrichWithAI(readme, log);
+        if (enriched) {
+          readme = enriched;
+          log('✨ README enrichi avec l\'IA');
+        }
+      }
+      
       await vscode.workspace.fs.writeFile(readmeUri, textEncoder.encode(readme));
+      log('✅ README.md sauvegardé avec succès');
+      
       vscode.window.showInformationMessage('README.md généré ✅');
       const doc = await vscode.workspace.openTextDocument(readmeUri);
       await vscode.window.showTextDocument(doc);
     } catch (err: any) {
-      vscode.window.showErrorMessage(`Erreur génération README: ${err?.message ?? String(err)}`);
+      const errMsg = err?.message ?? String(err);
+      log(`❌ Erreur génération README: ${errMsg}`);
+      vscode.window.showErrorMessage(`Erreur génération README: ${errMsg}`);
     }
   });
-  context.subscriptions.push(disposable);
+
+  const updateDisposable = vscode.commands.registerCommand('autoReadme.update', async () => {
+    try {
+      log('Commande de mise à jour initiée...');
+      const wsFolder = vscode.workspace.workspaceFolders?.[0];
+      if (!wsFolder) {
+        log('❌ Erreur: Aucun dossier de workspace ouvert.');
+        vscode.window.showErrorMessage('Aucun dossier de workspace ouvert.');
+        return;
+      }
+      
+      const readmeUri = vscode.Uri.joinPath(wsFolder.uri, 'README.md');
+      const existingReadme = await readTextFile(readmeUri);
+      if (!existingReadme) {
+        log('⚠️ Aucun README.md trouvé. Veuillez générer un nouveau README d\'abord.');
+        vscode.window.showWarningMessage('Aucun README.md existant. Générez-en un d\'abord avec "Auto README: Générer"');
+        return;
+      }
+      
+      // Générer le nouveau contenu
+      const config = vscode.workspace.getConfiguration('autoReadme');
+      const includeTree = config.get<boolean>('includeTree', true);
+      const maxTreeDepth = config.get<number>('maxTreeDepth', 2);
+      
+      const projectType = await detectProjectType(wsFolder.uri);
+      const meta = await extractMetadata(wsFolder.uri, projectType);
+      const tree = includeTree ? await buildDirectoryTree(wsFolder.uri, maxTreeDepth) : '';
+      
+      const creationDateMatch = existingReadme.match(/\*\*Structure créée le\*\*\s*:\s*(\d+\s+\w+\s+\d{4})/);
+      const creationDate = creationDateMatch ? creationDateMatch[1] : undefined;
+      
+      const newReadme = generateReadmeContent({ projectName: wsFolder.name, projectType, meta, tree, creationDate });
+      
+      // Comparer et afficher les différences
+      if (newReadme === existingReadme) {
+        log('ℹ️ Le README est déjà à jour.');
+        vscode.window.showInformationMessage('Le README est déjà à jour.');
+      } else {
+        await vscode.workspace.fs.writeFile(readmeUri, textEncoder.encode(newReadme));
+        log('✅ README.md mis à jour avec succès');
+        vscode.window.showInformationMessage('README.md mis à jour ✅');
+        const doc = await vscode.workspace.openTextDocument(readmeUri);
+        await vscode.window.showTextDocument(doc);
+      }
+    } catch (err: any) {
+      const errMsg = err?.message ?? String(err);
+      log(`❌ Erreur mise à jour README: ${errMsg}`);
+      vscode.window.showErrorMessage(`Erreur mise à jour README: ${errMsg}`);
+    }
+  });
+
+  context.subscriptions.push(disposable, updateDisposable);
 }
 
 export function deactivate() {}
@@ -64,8 +157,36 @@ export function deactivate() {}
 const textDecoder = new TextDecoder('utf-8');
 const textEncoder = new TextEncoder();
 
+// Cache pour stocker les patterns .gitignore
+const gitignoreCache = new Map<string, string[]>();
+
 async function readTextFile(uri: vscode.Uri): Promise<string | undefined> {
   try { const data = await vscode.workspace.fs.readFile(uri); return textDecoder.decode(data); } catch { return undefined; }
+}
+
+// Fonction pour lire et parser .gitignore
+async function readGitignore(root: vscode.Uri): Promise<string[]> {
+  const cacheKey = root.fsPath;
+  if (gitignoreCache.has(cacheKey)) {
+    return gitignoreCache.get(cacheKey)!;
+  }
+  
+  const gitignoreUri = vscode.Uri.joinPath(root, '.gitignore');
+  const content = await readTextFile(gitignoreUri);
+  const patterns = content
+    ? content.split(/\r?\n/).filter(l => l.trim() && !l.startsWith('#'))
+    : [];
+  
+  gitignoreCache.set(cacheKey, patterns);
+  return patterns;
+}
+
+// Fonction pour vérifier si un fichier/dossier doit être ignoré
+function shouldIgnorePath(path: string, patterns: string[]): boolean {
+  return patterns.some(pattern => {
+    const regex = new RegExp(pattern.replace(/[*]/g, '.*'));
+    return regex.test(path);
+  });
 }
 
 async function detectProjectType(root: vscode.Uri): Promise<ProjectType> {
@@ -76,7 +197,10 @@ async function detectProjectType(root: vscode.Uri): Promise<ProjectType> {
     { file: '*.csproj', type: '.net' as ProjectType },
     { file: 'pom.xml', type: 'java' as ProjectType },
     { file: 'build.gradle', type: 'java' as ProjectType },
-    { file: 'go.mod', type: 'go' as ProjectType }
+    { file: 'go.mod', type: 'go' as ProjectType },
+    { file: 'Cargo.toml', type: 'rust' as ProjectType },
+    { file: 'composer.json', type: 'php' as ProjectType },
+    { file: 'Gemfile', type: 'ruby' as ProjectType }
   ];
   for (const c of candidates) {
     if (c.file.includes('*')) { const files = await vscode.workspace.findFiles(c.file, '**/{node_modules,bin,obj}/**', 1); if (files.length > 0) return c.type; }
@@ -269,6 +393,30 @@ async function extractMetadata(root: vscode.Uri, type: ProjectType): Promise<Met
     const gomod = await readTextFile(vscode.Uri.joinPath(root, 'go.mod'));
     if (gomod) { const mods = gomod.split(/\r?\n/).filter(l => /^module\s|^require\s/i.test(l)).map(l => l.trim()); meta.goModules = mods; }
   }
+  if (type === 'rust' || type === 'generic') {
+    const cargo = await readTextFile(vscode.Uri.joinPath(root, 'Cargo.toml'));
+    if (cargo) {
+      const versionMatch = cargo.match(/version\s*=\s*"([^"]+)"/);
+      meta.rustCargoVersion = versionMatch ? versionMatch[1] : 'détecté';
+    }
+  }
+  if (type === 'php' || type === 'generic') {
+    const composer = await readTextFile(vscode.Uri.joinPath(root, 'composer.json'));
+    if (composer) {
+      try {
+        const obj = JSON.parse(composer);
+        meta.phpComposerVersion = obj.require?.php || 'détecté';
+        meta.dependencies = obj.require || {};
+      } catch {}
+    }
+  }
+  if (type === 'ruby' || type === 'generic') {
+    const gemfile = await readTextFile(vscode.Uri.joinPath(root, 'Gemfile'));
+    if (gemfile) {
+      const rubyMatch = gemfile.match(/ruby\s+['"]([^'"]+)['"]/);
+      meta.rubyGemfileVersion = rubyMatch ? rubyMatch[1] : 'détecté';
+    }
+  }
   const candidates = await vscode.workspace.findFiles('{index.*,main.*,app.*}', '**/node_modules/**', 20);
   meta.entryPoints = [...(meta.entryPoints ?? []), ...candidates.map(u => path.basename(u.fsPath))];
   return meta;
@@ -277,7 +425,7 @@ async function extractMetadata(root: vscode.Uri, type: ProjectType): Promise<Met
 function generateReadmeContent(params: { projectName: string; projectType: ProjectType; meta: Metadata; tree: string; creationDate?: string }): string {
   const { projectName, projectType, meta, tree, creationDate: providedCreationDate } = params;
   const shield = (label: string, message: string, color: string) => `![${label}](https://img.shields.io/badge/${encodeURIComponent(label)}-${encodeURIComponent(message)}-${color})`;
-  const colorByType: Record<ProjectType, string> = { node: '3C873A', python: '3776AB', '.net': '512BD4', java: 'F89820', go: '00ADD8', generic: '444444' };
+  const colorByType: Record<ProjectType, string> = { node: '3C873A', python: '3776AB', '.net': '512BD4', java: 'F89820', go: '00ADD8', rust: 'CE422B', php: '777BB4', ruby: 'CC342D', generic: '444444' };
   
   const formatDate = (date: Date): string => {
     const months: Record<number, string> = { 0: 'janvier', 1: 'février', 2: 'mars', 3: 'avril', 4: 'mai', 5: 'juin', 6: 'juillet', 7: 'août', 8: 'septembre', 9: 'octobre', 10: 'novembre', 11: 'décembre' };
@@ -291,13 +439,13 @@ function generateReadmeContent(params: { projectName: string; projectType: Proje
   const description = `> 🤖 README généré automatiquement par **Auto README Bot**\n\n**Auteur** : © C.L (Skill teams)\n\n`;
   
   const badges = [
-    shield('Type', { node: 'Node.js', python: 'Python', '.net': '.NET', java: 'Java', go: 'Go', generic: 'Multi' }[projectType], colorByType[projectType]),
+    shield('Type', { node: 'Node.js', python: 'Python', '.net': '.NET', java: 'Java', go: 'Go', rust: 'Rust', php: 'PHP', ruby: 'Ruby', generic: 'Multi' }[projectType], colorByType[projectType]),
     meta.license ? shield('License', meta.license.replace('SEE LICENSE FILE', 'MIT'), '00ADD8') : '',
     shield('Generated', 'Auto_README_Bot', '8A2BE2')
   ].filter(Boolean).join(' ');
-  const typeLabel = { node: 'Projet Node.js', python: 'Projet Python', '.net': 'Projet .NET (C#)', java: 'Projet Java', go: 'Projet Go', generic: 'Projet générique' }[projectType];
-  const prereq = (() => { switch (projectType) { case 'node': return '- Node.js (>= 18)\n- npm ou pnpm'; case 'python': return '- Python (>= 3.10)\n- pip / venv'; case '.net': return '- .NET SDK (>= 8)\n- Visual Studio Code ou Visual Studio'; case 'java': return '- JDK (>= 17)\n- Maven ou Gradle'; case 'go': return '- Go (>= 1.22)'; default: return '- Outils selon le langage utilisé'; } })();
-  const install = (() => { switch (projectType) { case 'node': return '```bash\nnpm install\n```'; case 'python': return '```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\n```'; case '.net': return '```bash\ndotnet restore\n```'; case 'java': return (meta.javaBuild === 'maven' ? '```bash\nmvn clean install\n```' : '```bash\ngradle build\n```'); case 'go': return '```bash\ngo mod tidy\n```'; default: return 'Installez les dépendances requises selon votre stack.'; } })();
+  const typeLabel = { node: 'Projet Node.js', python: 'Projet Python', '.net': 'Projet .NET (C#)', java: 'Projet Java', go: 'Projet Go', rust: 'Projet Rust', php: 'Projet PHP', ruby: 'Projet Ruby', generic: 'Projet générique' }[projectType];
+  const prereq = (() => { switch (projectType) { case 'node': return '- Node.js (>= 18)\n- npm ou pnpm'; case 'python': return '- Python (>= 3.10)\n- pip / venv'; case '.net': return '- .NET SDK (>= 8)\n- Visual Studio Code ou Visual Studio'; case 'java': return '- JDK (>= 17)\n- Maven ou Gradle'; case 'go': return '- Go (>= 1.22)'; case 'rust': return '- Rust (>= 1.70)\n- Cargo'; case 'php': return '- PHP (>= 8.0)\n- Composer'; case 'ruby': return '- Ruby (>= 3.0)\n- Bundler'; default: return '- Outils selon le langage utilisé'; } })();
+  const install = (() => { switch (projectType) { case 'node': return '```bash\nnpm install\n```'; case 'python': return '```bash\npython -m venv .venv\nsource .venv/bin/activate\npip install -r requirements.txt\n```'; case '.net': return '```bash\ndotnet restore\n```'; case 'java': return (meta.javaBuild === 'maven' ? '```bash\nmvn clean install\n```' : '```bash\ngradle build\n```'); case 'go': return '```bash\ngo mod tidy\n```'; case 'rust': return '```bash\ncargo build\n```'; case 'php': return '```bash\ncomposer install\n```'; case 'ruby': return '```bash\nbundle install\n```'; default: return 'Installez les dépendances requises selon votre stack.'; } })();
   const run = (() => {
     if (projectType === '.net' && meta.dotnetProjects && meta.dotnetProjects.length > 0) {
       const pick = (predicate: (p: string) => boolean) => { const match = meta.dotnetProjects!.find(p => { const name = path.basename(p, '.csproj'); return predicate(name); }); return match; };
@@ -310,19 +458,26 @@ function generateReadmeContent(params: { projectName: string; projectType: Proje
     if (projectType === 'node' && meta.scripts && meta.scripts['start']) return '```bash\nnpm run start\n```';
     if (projectType === 'python') return '```bash\npython main.py\n```';
     if (projectType === 'java') return (meta.javaBuild === 'maven' ? '```bash\nmvn exec:java\n```' : '```bash\ngradle run\n```');
-    if (projectType === 'go') return '```bash\ngo run ./...\n```';
-    return 'Décrivez ici comment lancer l’application (commande, arguments, etc.).';
+    if (projectType === 'go') return '```bash\ngo run ./...\n```';    if (projectType === 'rust') return '```bash\ncargo run\n```';
+    if (projectType === 'php') return '```bash\nphp -S localhost:8000\n```';
+    if (projectType === 'ruby') return '```bash\nruby app.rb\n```';    return 'Décrivez ici comment lancer l’application (commande, arguments, etc.).';
   })();
   const test = (() => {
     if (projectType === '.net') { const testProjects = Object.entries(meta.dotnetIsTest ?? {}).filter(([, isTest]) => isTest).map(([name]) => name); const hint = (testProjects.length > 0) ? `Projets de test détectés: ${testProjects.join(', ')}\n` : ''; return `${hint}\`\`\`bash\ndotnet test\n\`\`\``; }
     if (projectType === 'node' && meta.scripts && meta.scripts['test']) return '```bash\nnpm test\n```';
     if (projectType === 'java') return (meta.javaBuild === 'maven' ? '```bash\nmvn test\n```' : '```bash\ngradle test\n```');
     if (projectType === 'python') return '```bash\npytest\n```';
+    if (projectType === 'rust') return '```bash\ncargo test\n```';
+    if (projectType === 'php') return '```bash\nphpunit\n```';
+    if (projectType === 'ruby') return '```bash\nrake test\n```';
     return 'Ajoutez la commande de test correspondant à votre stack.';
   })();
   const deps = (() => {
     if (projectType === 'node') { const d = meta.dependencies ? Object.keys(meta.dependencies) : []; const dd = meta.devDependencies ? Object.keys(meta.devDependencies) : []; return `**Dependencies:** ${d.join(', ') || '—'}\n**DevDependencies:** ${dd.join(', ') || '—'}`; }
     if (projectType === 'python') { return `**Requirements:** ${(meta.pythonRequirements ?? []).join(', ') || '—'}`; }
+    if (projectType === 'rust') { return `**Cargo.toml:** ${meta.rustCargoVersion || 'Détecté'}`; }
+    if (projectType === 'php') { return `**Composer:** ${meta.phpComposerVersion || 'Détecté'}`; }
+    if (projectType === 'ruby') { return `**Gemfile:** ${meta.rubyGemfileVersion || 'Détecté'}`; }
     if (projectType === '.net') {
       const lines: string[] = []; const projList = meta.dotnetProjects ?? []; const slnList = meta.dotnetSolutions ?? [];
       if (slnList.length > 0) lines.push(`**Solutions (.sln):** ${slnList.map(s => path.basename(s)).join(', ')}`);
@@ -455,7 +610,7 @@ function generateReadmeContent(params: { projectName: string; projectType: Proje
   ].join('');
 }
 
-async function enrichWithAI(current: string): Promise<string | undefined> {
+async function enrichWithAI(current: string, log: (msg: string) => void): Promise<string | undefined> {
   try {
     // Essayer OpenAI d'abord
     const openaiKey = process.env.OPENAI_API_KEY;
