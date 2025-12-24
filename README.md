@@ -4,6 +4,8 @@
 
 > 🤖 README généré automatiquement par **Auto README Bot**
 
+**Auteur** : © C.L (Skill teams)
+
 ---
 
 ## 📋 Table des matières
@@ -93,7 +95,6 @@ Pour toute question ou suggestion d'amélioration, consultez la documentation da
 
 ---
 
-**Auteur** : © C.L (Skill teams)  
 **Structure créée le** : 9 décembre 2025  
 **Dernière mise à jour** : 15 décembre 2025  
 **Version** : 1.0.2
