@@ -1,7 +1,6 @@
 src/
 dist/
 node_modules/
-*.vsix
 tools/
 out/
 .vscode/
